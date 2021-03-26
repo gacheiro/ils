@@ -1,0 +1,4 @@
+BasedOnStyle: llvm
+# AlignConsecutiveDeclarations: true
+AlignConsecutiveAssignments: true
+IndentWidth: 4
