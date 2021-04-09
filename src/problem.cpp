@@ -5,7 +5,9 @@
 
 using namespace Problem;
 
-Problem::Instance Problem::loadInstance(const char *Path) {
+std::vector<std::vector<uint32_t>> Problem::DistMatrix;
+
+Problem::Instance Problem::loadInstance(const std::string Path) {
     std::vector<Node> Nodes;
     std::vector<Edge> Edges;
     std::ifstream InstanceFile(Path);
@@ -40,7 +42,7 @@ Problem::Instance Problem::loadInstance(const char *Path) {
 
         InstanceFile.close();
     } else {
-        std::cerr << "unable to open path " << Path << "\n";
+        std::cerr << "error: unable to open path " << Path << "\n";
         abort();
     }
     return Instance(NumOfNodes, NumOfEdges, Nodes, Edges);
@@ -51,7 +53,7 @@ struct WT {
 };
 
 uint32_t Problem::evaluateSchedule(const Instance &Instance,
-                                   const std::vector<Node> &Schedule) {
+                                   const std::vector<size_t> &Schedule) {
     const auto Q = Instance.TotalNumOfWT();
     std::vector<WT> WTs(Q);
     std::vector<uint32_t> StartTime(Instance.NumOfNodes, 0);
@@ -59,7 +61,7 @@ uint32_t Problem::evaluateSchedule(const Instance &Instance,
 
     // Set the starting node of every WT sequentially in order of origins.
     size_t WTId = 0;
-    for (const auto OId : Instance.GetOriginIds()) {
+    for (const auto OId : Instance.GetOriginsIds()) {
         for (uint32_t I = 0; I < Instance.Nodes[OId].NumberOfWT; ++I) {
             WTs[WTId].Id     = WTId;
             WTs[WTId].NodeId = OId;
@@ -67,54 +69,47 @@ uint32_t Problem::evaluateSchedule(const Instance &Instance,
         }
     }
 
-    const auto T           = Instance.TotalNumOfPeriods();
-    const auto &DistMatrix = GetDistanceMatrix(Instance.Nodes, Instance.Edges);
-    const auto &Duration   = Instance.GetDurations();
+    const auto T         = Instance.TotalNumOfPeriods();
+    const auto &Duration = Instance.GetDurations();
+
     for (uint32_t Period = 1; Period <= T; ++Period)
         for (auto &W : WTs)
-            for (const auto &Node : Schedule) {
-                assert(!Node.isOrigin() && "Scheduled Node is an origin!");
-                if (CompletionTime[Node.Id] > 0)
+            for (const auto NodeId : Schedule) {
+
+                assert(!Instance.Nodes[NodeId].isOrigin() &&
+                       "Scheduled NodeId is an origin!");
+
+                if (CompletionTime[NodeId] > 0 ||
+                    CompletionTime[W.NodeId] > Period)
                     continue;
 
-                else if (CompletionTime[W.NodeId] <= Period) {
-                    if (Instance.Nodes[W.NodeId].isOrigin())
-                        // Don't consider the distance between origins and
-                        // destinations (bug in the model).
-                        StartTime[Node.Id] = Period;
-                    else
-                        // Ok for the distance between destinations
-                        StartTime[Node.Id] = Period + DistMatrix[W.NodeId][Node.Id];
-                    CompletionTime[Node.Id] =
-                        StartTime[Node.Id] + Duration[Node.Id];
-                    W.NodeId = Node.Id;
-                }
+                StartTime[NodeId] =
+                    Period + Problem::DistMatrix[W.NodeId][NodeId];
+
+                CompletionTime[NodeId] = StartTime[NodeId] + Duration[NodeId];
+
+                W.NodeId = NodeId;
             }
 
     auto Makespan =
         std::max_element(CompletionTime.begin(), CompletionTime.end());
 
-    for (const auto S : StartTime)
-        std::cout << S << " ";
-    std::cout << std::endl;
-    for (const auto C : CompletionTime)
-        std::cout << C << " ";
-    std::cout << std::endl;
-    std::cout << "Makespan = " << *Makespan << std::endl;
     return *Makespan;
 }
 
 std::vector<std::vector<uint32_t>>
-Problem::GetDistanceMatrix(const std::vector<Node> Nodes,
-                           const std::vector<Edge> Edges) {
+Problem::GetDistanceMatrix(const std::vector<Node> &Nodes,
+                           const std::vector<Edge> &Edges) {
     const size_t Size = Nodes.size();
+
     // Creates a 2D vector of uint32_t
     std::vector<std::vector<uint32_t>> DistMatrix(
-        Size, std::vector<uint32_t>(Size, 999));
+        Size, std::vector<uint32_t>(Size, Problem::M));
 
     // Populates the diagonal with 0's
     for (size_t I = 0; I < DistMatrix.size(); ++I)
         DistMatrix[I][I] = 0;
+
     // Populates the matrix with the direct edges
     for (const auto &Edge : Edges) {
         DistMatrix[Edge.U.Id][Edge.V.Id] = Edge.Weight;
@@ -128,5 +123,6 @@ Problem::GetDistanceMatrix(const std::vector<Node> Nodes,
             for (size_t J = 0; J < DistMatrix.size(); ++J)
                 if (DistMatrix[I][J] > DistMatrix[I][K] + DistMatrix[K][J])
                     DistMatrix[I][J] = DistMatrix[I][K] + DistMatrix[K][J];
+
     return DistMatrix;
 }

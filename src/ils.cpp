@@ -5,33 +5,37 @@
 
 using namespace ILS;
 
-static inline void applyPerturbation(std::vector<Problem::Node> &Solution,
-                                     double PerturbationStrength);
+static inline void applyPerturbation(std::vector<size_t> &, float);
+static int32_t scanNeighborhood(const Problem::Instance &,
+                                std::vector<size_t> &);
 
 Problem::Solution ILS::solveInstance(const Problem::Instance &Instance,
-                                     double PerturbationStrength,
+                                     float PerturbationStrength,
                                      int NumOfIterations) {
 
     // Sort vector by risk in descending order
-    std::vector<Problem::Node> CurrentSchedule = Instance.GetDestinations();
-    Problem::repairSchedule(CurrentSchedule);
+    std::vector<size_t> CurrentSchedule = Instance.GetDestinationsIds();
+    Problem::repairSchedule(Instance, CurrentSchedule);
 
+    applyLocalSearch(Instance, CurrentSchedule);
     auto CurrentObjective =
         Problem::evaluateSchedule(Instance, CurrentSchedule);
 
     do {
         // Copies the schedule and evaluates the perturbated schedule
-        std::vector<Problem::Node> CandidateSchedule = CurrentSchedule;
+        auto CandidateSchedule = CurrentSchedule;
         applyPerturbation(CandidateSchedule, PerturbationStrength);
+
         // Sort vector by risk in descending order
-        Problem::repairSchedule(CandidateSchedule);
+        Problem::repairSchedule(Instance, CandidateSchedule);
+
+        applyLocalSearch(Instance, CandidateSchedule);
 
         // Evaluates the schedule with perturbation
         auto CandidateObjective =
             Problem::evaluateSchedule(Instance, CandidateSchedule);
 
         if (CurrentObjective > CandidateObjective) {
-            // Updates the current solution
             CurrentObjective = CandidateObjective;
             CurrentSchedule  = CandidateSchedule;
         }
@@ -42,8 +46,8 @@ Problem::Solution ILS::solveInstance(const Problem::Instance &Instance,
     return Problem::Solution(CurrentObjective, CurrentSchedule);
 }
 
-static inline void applyPerturbation(std::vector<Problem::Node> &Schedule,
-                                     double PerturbationStrength) {
+static inline void applyPerturbation(std::vector<size_t> &Schedule,
+                                     float PerturbationStrength) {
     auto Size       = Schedule.size();
     auto NumOfSwaps = Size * PerturbationStrength / 2;
 
@@ -56,5 +60,43 @@ static inline void applyPerturbation(std::vector<Problem::Node> &Schedule,
     } while (--NumOfSwaps > 0);
 }
 
-Problem::Solution ILS::applyLocalSearch(const Problem::Instance &Instance,
-                                        Problem::Solution &Solution) {}
+static int32_t scanNeighborhood(const Problem::Instance &Instance,
+                                std::vector<size_t> &Schedule) {
+    const auto Size       = Schedule.size();
+    auto CurrentObjective = Problem::evaluateSchedule(Instance, Schedule);
+
+    for (size_t I = 0; I < Size - 1; ++I) {
+        for (size_t J = I + 1; J < Size; ++J) {
+            // Performs a swap between jobs at indices I and J
+            // with respect to precedence constraints.
+            // This way we keep the schedule feasible.
+            if (Instance.Nodes[Schedule[I]].Risk >
+                Instance.Nodes[Schedule[J]].Risk)
+                continue;
+
+            auto Aux    = Schedule[I];
+            Schedule[I] = Schedule[J];
+            Schedule[J] = Aux;
+
+            auto Objective = Problem::evaluateSchedule(Instance, Schedule);
+
+            if (Objective < CurrentObjective) {
+                std::cout << "Found a better local optimum " << Objective
+                          << "\n";
+                return Objective;
+            } else {
+                // Not a better solution. Undo the swap
+                Schedule[J] = Schedule[I];
+                Schedule[I] = Aux;
+            }
+        }
+    }
+    return -1;
+}
+
+void ILS::applyLocalSearch(const Problem::Instance &Instance,
+
+                           std::vector<size_t> &Schedule) {
+    for (size_t I = 0; scanNeighborhood(Instance, Schedule) != -1; ++I) {
+    }
+}

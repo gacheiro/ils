@@ -4,11 +4,16 @@
 #include <algorithm>
 #include <cassert>
 #include <iostream>
+#include <string>
 #include <vector>
 
 namespace Problem {
 
 enum NodeType { Origin, Destination };
+
+const int M = 999;
+
+extern std::vector<std::vector<uint32_t>> DistMatrix;
 
 struct Node {
     size_t Id;
@@ -52,7 +57,7 @@ struct Instance {
         }
     }
 
-    std::vector<size_t> GetOriginIds() const {
+    std::vector<size_t> GetOriginsIds() const {
         std::vector<size_t> Ids;
         for (const auto &Node : Nodes)
             if (Node.Type == Origin)
@@ -60,12 +65,12 @@ struct Instance {
         return Ids;
     }
 
-    std::vector<Node> GetDestinations() const {
-        std::vector<Node> Destinations;
+    std::vector<size_t> GetDestinationsIds() const {
+        std::vector<size_t> Ids;
         for (const auto &Node : Nodes)
             if (Node.Type == Destination)
-                Destinations.push_back(Node);
-        return Destinations;
+                Ids.push_back(Node.Id);
+        return Ids;
     }
 
     std::vector<uint32_t> GetDurations() const {
@@ -94,22 +99,23 @@ struct Instance {
 
 struct Solution {
     uint32_t Objective;
-    std::vector<Node> Schedule;
+    std::vector<size_t> Schedule;
 
-    Solution(uint32_t _Objective, std::vector<Node> _Schedule)
+    Solution(uint32_t _Objective, std::vector<size_t> _Schedule)
         : Objective(_Objective), Schedule{_Schedule} {}
 };
 
-Instance loadInstance(const char *);
-uint32_t evaluateSchedule(const Instance &, const std::vector<Node> &);
-std::vector<std::vector<uint32_t>> GetDistanceMatrix(const std::vector<Node>,
-                                                     const std::vector<Edge>);
+Instance loadInstance(const std::string);
+uint32_t evaluateSchedule(const Instance &, const std::vector<size_t> &);
+std::vector<std::vector<uint32_t>> GetDistanceMatrix(const std::vector<Node> &,
+                                                     const std::vector<Edge> &);
 
-static inline void repairSchedule(std::vector<Node> &Schedule) {
-    std::stable_sort(Schedule.begin(), Schedule.end(),
-              [&](Problem::Node U, Problem::Node V) -> bool {
-                  return U.Risk > V.Risk;
-              });
+static inline void repairSchedule(const Instance &Instance,
+                                  std::vector<size_t> &Schedule) {
+    std::stable_sort(
+        Schedule.begin(), Schedule.end(), [&](size_t UId, size_t VId) -> bool {
+            return Instance.Nodes[UId].Risk > Instance.Nodes[VId].Risk;
+        });
 }
 
 } // namespace Problem

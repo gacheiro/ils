@@ -11,12 +11,9 @@ problem.o: src/problem.h src/problem.cpp
 ils.o: src/ils.h src/ils.cpp
 	$(CC) $(CFLAGS) -c src/ils.cpp
 
-all: problem.o ils.o
-	$(CC) $(CFLAGS) -o main src/main.cpp problem.o ils.o
+ils: problem.o ils.o src/main.cpp
+	$(CC) $(CFLAGS) -o ils src/main.cpp problem.o ils.o
 
 clean:
 	rm -f *.o
-	rm -f a.out
 	rm -f ils
-	rm -f grasp
-	rm -f test_all.out
