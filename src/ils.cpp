@@ -39,8 +39,6 @@ Problem::Solution ILS::solveInstance(const Problem::Instance &Instance,
             CurrentObjective = CandidateObjective;
             CurrentSchedule  = CandidateSchedule;
         }
-
-        std::cout << "ILS: iteration: " << CurrentObjective << " objective\n";
     } while (--NumOfIterations > 0);
 
     return Problem::Solution(CurrentObjective, CurrentSchedule);
@@ -80,11 +78,9 @@ static int32_t scanNeighborhood(const Problem::Instance &Instance,
 
             auto Objective = Problem::evaluateSchedule(Instance, Schedule);
 
-            if (Objective < CurrentObjective) {
-                std::cout << "Found a better local optimum " << Objective
-                          << "\n";
+            if (Objective < CurrentObjective)
                 return Objective;
-            } else {
+            else {
                 // Not a better solution. Undo the swap
                 Schedule[J] = Schedule[I];
                 Schedule[I] = Aux;
@@ -95,8 +91,6 @@ static int32_t scanNeighborhood(const Problem::Instance &Instance,
 }
 
 void ILS::applyLocalSearch(const Problem::Instance &Instance,
-
                            std::vector<size_t> &Schedule) {
-    for (size_t I = 0; scanNeighborhood(Instance, Schedule) != -1; ++I) {
-    }
+    for (size_t I = 0; scanNeighborhood(Instance, Schedule) != -1; ++I);
 }

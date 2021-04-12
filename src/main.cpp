@@ -15,9 +15,9 @@ int parseCommandLine(int Argc, char *Argv[]) {
         "  OPTIONS:\n\n"
         "  -h, --help\n"
         "      Show this message and exit\n\n"
-        "  --niterations[=NUMBER]\n"
+        "  --niterations [NUMBER]\n"
         "      The number of iterations to run\n\n"
-        "  --pstrength[=STRENGTH]\n"
+        "  --pstrength [STRENGTH]\n"
         "      The pertubation strength factor in the interval [0, 1]\n\n";
 
     if (Argc < 2) {
@@ -61,12 +61,15 @@ int main(int Argc, char *Argv[]) {
         return -1;
     }
 
+    std::cout << "\nRunning instance " << InstanceFile
+              << " with parameters --nbiterations=" << NumberOfIterations
+              << " --pstrength=" << PertubationStrength << "\n";
+
     Problem::Instance Instance = Problem::loadInstance(InstanceFile);
 
     // Initializes the global distance matrix
     Problem::DistMatrix =
         Problem::GetDistanceMatrix(Instance.Nodes, Instance.Edges);
-    std::cout << NumberOfIterations << " " << PertubationStrength << "\n";
     Problem::Solution Solution =
         ILS::solveInstance(Instance, PertubationStrength, NumberOfIterations);
     std::cout << "Objective = " << Solution.Objective << std::endl;

@@ -80,15 +80,6 @@ struct Instance {
         return Duration;
     }
 
-    uint32_t TotalNumOfPeriods() const {
-        uint32_t Sum = 0;
-        for (const auto &Node : Nodes)
-            Sum += Node.Duration;
-        // NOTE: Naive way to set an upper bound for the makespan.
-        // This can fail sometimes :(
-        return Sum * 2;
-    }
-
     uint32_t TotalNumOfWT() const {
         uint32_t Sum = 0;
         for (const auto &Node : Nodes)

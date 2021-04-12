@@ -5,6 +5,10 @@
 
 using namespace Problem;
 
+struct WT {
+    size_t Id, NodeId;
+};
+
 std::vector<std::vector<uint32_t>> Problem::DistMatrix;
 
 Problem::Instance Problem::loadInstance(const std::string Path) {
@@ -48,10 +52,6 @@ Problem::Instance Problem::loadInstance(const std::string Path) {
     return Instance(NumOfNodes, NumOfEdges, Nodes, Edges);
 }
 
-struct WT {
-    size_t Id, NodeId;
-};
-
 uint32_t Problem::evaluateSchedule(const Instance &Instance,
                                    const std::vector<size_t> &Schedule) {
     const auto Q = Instance.TotalNumOfWT();
@@ -69,27 +69,37 @@ uint32_t Problem::evaluateSchedule(const Instance &Instance,
         }
     }
 
-    const auto T         = Instance.TotalNumOfPeriods();
     const auto &Duration = Instance.GetDurations();
 
-    for (uint32_t Period = 1; Period <= T; ++Period)
-        for (auto &W : WTs)
+    for (uint32_t Period = 1;; ++Period) {
+
+        for (auto &W : WTs) {
+            
+            if (CompletionTime[W.NodeId] > Period)
+                continue;
+            
             for (const auto NodeId : Schedule) {
 
-                assert(!Instance.Nodes[NodeId].isOrigin() &&
-                       "Scheduled NodeId is an origin!");
+                if (Instance.Nodes[NodeId].isOrigin()) {
+                    std::cout << "error: scheduled NodeId `" << NodeId << "` is an origin\n";
+                }
 
-                if (CompletionTime[NodeId] > 0 ||
-                    CompletionTime[W.NodeId] > Period)
+                else if (CompletionTime[NodeId] > 0)
                     continue;
 
                 StartTime[NodeId] =
                     Period + Problem::DistMatrix[W.NodeId][NodeId];
-
                 CompletionTime[NodeId] = StartTime[NodeId] + Duration[NodeId];
 
                 W.NodeId = NodeId;
+                break;
             }
+        }
+
+        // Every node have been cleaned
+        if (CompletionTime[Schedule.back()] > 0)
+            break;
+    }
 
     auto Makespan =
         std::max_element(CompletionTime.begin(), CompletionTime.end());
