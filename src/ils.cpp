@@ -5,13 +5,14 @@
 
 using namespace ILS;
 
+bool ILS::TIME_LIMIT_EXCEEDED = false;
+
 static inline void applyPerturbation(std::vector<size_t> &, float);
 static int32_t scanNeighborhood(const Problem::Instance &,
                                 std::vector<size_t> &);
 
 Problem::Solution ILS::solveInstance(const Problem::Instance &Instance,
-                                     float PerturbationStrength,
-                                     int NumOfIterations) {
+                                     float PerturbationStrength) {
 
     // Sort vector by risk in descending order
     std::vector<size_t> CurrentSchedule = Instance.GetDestinationsIds();
@@ -39,7 +40,7 @@ Problem::Solution ILS::solveInstance(const Problem::Instance &Instance,
             CurrentObjective = CandidateObjective;
             CurrentSchedule  = CandidateSchedule;
         }
-    } while (--NumOfIterations > 0);
+    } while (!ILS::TIME_LIMIT_EXCEEDED);
 
     return Problem::Solution(CurrentObjective, CurrentSchedule);
 }
@@ -65,6 +66,10 @@ static int32_t scanNeighborhood(const Problem::Instance &Instance,
 
     for (size_t I = 0; I < Size - 1; ++I) {
         for (size_t J = I + 1; J < Size; ++J) {
+
+            if (ILS::TIME_LIMIT_EXCEEDED)
+                return -1;
+
             // Performs a swap between jobs at indices I and J
             // with respect to precedence constraints.
             // This way we keep the schedule feasible.

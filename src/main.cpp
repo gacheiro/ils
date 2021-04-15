@@ -1,11 +1,14 @@
 #include <iostream>
 #include <string>
+#include <future>
+#include <thread>
+#include <chrono>
 
 #include "ils.h"
 #include "problem.h"
 
 std::string InstanceFile;
-uint32_t NumberOfIterations = 10;
+uint32_t TimeLimit = 10;
 float PertubationStrength = 0.5;
 
 int parseCommandLine(int Argc, char *Argv[]) {
@@ -15,6 +18,8 @@ int parseCommandLine(int Argc, char *Argv[]) {
         "  OPTIONS:\n\n"
         "  -h, --help\n"
         "      Show this message and exit\n\n"
+        "  --time-limit [LIMIT]\n"
+        "      The maximum time to execute the program (in seconds)\n\n"
         "  --niterations [NUMBER]\n"
         "      The number of iterations to run\n\n"
         "  --pstrength [STRENGTH]\n"
@@ -32,11 +37,11 @@ int parseCommandLine(int Argc, char *Argv[]) {
             return -1;
         }
 
-        else if ((Arg == "--niterations"))
+        else if ((Arg == "--time-limit"))
             if (I + 1 < Argc) {
-                NumberOfIterations = std::stoi(Argv[++I]);
+                TimeLimit = std::stoi(Argv[++I]);
             } else {
-                std::cout << "--niterations option requires one argument\n";
+                std::cout << "--time-limit option requires one argument\n";
                 return -1;
             }
 
@@ -62,7 +67,7 @@ int main(int Argc, char *Argv[]) {
     }
 
     std::cout << "\nRunning instance " << InstanceFile
-              << " with parameters --nbiterations=" << NumberOfIterations
+              << " with parameters --time-limit=" << TimeLimit
               << " --pstrength=" << PertubationStrength << "\n";
 
     Problem::Instance Instance = Problem::loadInstance(InstanceFile);
@@ -70,8 +75,16 @@ int main(int Argc, char *Argv[]) {
     // Initializes the global distance matrix
     Problem::DistMatrix =
         Problem::GetDistanceMatrix(Instance.Nodes, Instance.Edges);
-    Problem::Solution Solution =
-        ILS::solveInstance(Instance, PertubationStrength, NumberOfIterations);
-    std::cout << "Objective = " << Solution.Objective << std::endl;
+
+    // We start the optimization in another thread while this one
+    // if responsible for accounting the time limit and sinalyzing
+    // when the time limit is reached
+    std::future<Problem::Solution> FutureSolution = 
+        std::async(ILS::solveInstance, Instance, PertubationStrength);
+
+    std::this_thread::sleep_for(std::chrono::seconds(TimeLimit));
+    ILS::TIME_LIMIT_EXCEEDED = true;
+
+    std::cout << "Objective = " << FutureSolution.get().Objective << std::endl;
     return 0;
 }

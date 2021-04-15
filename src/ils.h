@@ -4,7 +4,11 @@
 #include "problem.h"
 
 namespace ILS {
-Problem::Solution solveInstance(const Problem::Instance &, float, int);
+
+// Global flag to terminate the execution when the time limit has exceeded
+extern bool TIME_LIMIT_EXCEEDED;
+
+Problem::Solution solveInstance(const Problem::Instance &, float);
 void applyLocalSearch(const Problem::Instance &, std::vector<size_t> &);
 } // namespace ILS
 
