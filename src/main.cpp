@@ -1,14 +1,14 @@
+#include <chrono>
+#include <future>
 #include <iostream>
 #include <string>
-#include <future>
 #include <thread>
-#include <chrono>
 
 #include "ils.h"
 #include "problem.h"
 
 std::string InstanceFile;
-uint32_t TimeLimit = 10;
+uint32_t TimeLimit        = 10;
 float PertubationStrength = 0.5;
 
 int parseCommandLine(int Argc, char *Argv[]) {
@@ -20,8 +20,6 @@ int parseCommandLine(int Argc, char *Argv[]) {
         "      Show this message and exit\n\n"
         "  --time-limit [LIMIT]\n"
         "      The maximum time to execute the program (in seconds)\n\n"
-        "  --niterations [NUMBER]\n"
-        "      The number of iterations to run\n\n"
         "  --pstrength [STRENGTH]\n"
         "      The pertubation strength factor in the interval [0, 1]\n\n";
 
@@ -72,14 +70,10 @@ int main(int Argc, char *Argv[]) {
 
     Problem::Instance Instance = Problem::loadInstance(InstanceFile);
 
-    // Initializes the global distance matrix
-    Problem::DistMatrix =
-        Problem::GetDistanceMatrix(Instance.Nodes, Instance.Edges);
-
     // We start the optimization in another thread while this one
     // if responsible for accounting the time limit and sinalyzing
     // when the time limit is reached
-    std::future<Problem::Solution> FutureSolution = 
+    std::future<Problem::Solution> FutureSolution =
         std::async(ILS::solveInstance, Instance, PertubationStrength);
 
     std::this_thread::sleep_for(std::chrono::seconds(TimeLimit));

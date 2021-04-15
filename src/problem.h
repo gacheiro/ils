@@ -13,8 +13,6 @@ enum NodeType { Origin, Destination };
 
 const int M = 999;
 
-extern std::vector<std::vector<uint32_t>> DistMatrix;
-
 struct Node {
     size_t Id;
     NodeType Type;
@@ -38,11 +36,15 @@ struct Edge {
     Edge(Node _U, Node _V) : U{_U}, V{_V} {}
 };
 
+std::vector<std::vector<uint32_t>> GetDistanceMatrix(const std::vector<Node> &,
+                                                     const std::vector<Edge> &);
+
 struct Instance {
     size_t NumOfNodes;
     size_t NumOfEdges;
     std::vector<Node> Nodes;
     std::vector<Edge> Edges;
+    std::vector<std::vector<uint32_t>> DistMatrix;
 
     Instance(size_t _NumOfNodes, size_t _NumOfEdges, std::vector<Node> _Nodes,
              std::vector<Edge> _Edges)
@@ -55,6 +57,8 @@ struct Instance {
                       << "\n";
             abort();
         }
+
+        DistMatrix = Problem::GetDistanceMatrix(Nodes, Edges);
     }
 
     std::vector<size_t> GetOriginsIds() const {
@@ -98,8 +102,6 @@ struct Solution {
 
 Instance loadInstance(const std::string);
 uint32_t evaluateSchedule(const Instance &, const std::vector<size_t> &);
-std::vector<std::vector<uint32_t>> GetDistanceMatrix(const std::vector<Node> &,
-                                                     const std::vector<Edge> &);
 
 static inline void repairSchedule(const Instance &Instance,
                                   std::vector<size_t> &Schedule) {

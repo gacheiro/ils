@@ -9,8 +9,6 @@ struct WT {
     size_t Id, NodeId;
 };
 
-std::vector<std::vector<uint32_t>> Problem::DistMatrix;
-
 Problem::Instance Problem::loadInstance(const std::string Path) {
     std::vector<Node> Nodes;
     std::vector<Edge> Edges;
@@ -74,21 +72,22 @@ uint32_t Problem::evaluateSchedule(const Instance &Instance,
     for (uint32_t Period = 1;; ++Period) {
 
         for (auto &W : WTs) {
-            
+
             if (CompletionTime[W.NodeId] > Period)
                 continue;
-            
+
             for (const auto NodeId : Schedule) {
 
                 if (Instance.Nodes[NodeId].isOrigin()) {
-                    std::cout << "error: scheduled NodeId `" << NodeId << "` is an origin\n";
+                    std::cout << "error: scheduled NodeId `" << NodeId
+                              << "` is an origin\n";
                 }
 
                 else if (CompletionTime[NodeId] > 0)
                     continue;
 
                 StartTime[NodeId] =
-                    Period + Problem::DistMatrix[W.NodeId][NodeId];
+                    Period + Instance.DistMatrix[W.NodeId][NodeId];
                 CompletionTime[NodeId] = StartTime[NodeId] + Duration[NodeId];
 
                 W.NodeId = NodeId;
