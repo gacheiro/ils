@@ -8,33 +8,36 @@ using namespace ILS;
 bool ILS::TIME_LIMIT_EXCEEDED = false;
 
 static inline void applyPerturbation(std::vector<size_t> &, float);
-static int32_t scanNeighborhood(const Problem::Instance &,
+static int32_t scanNeighborhood(Problem::Model Model, const Problem::Instance &,
                                 std::vector<size_t> &);
 
-Problem::Solution ILS::solveInstance(const Problem::Instance &Instance,
+Problem::Solution ILS::solveInstance(Problem::Model Model,
+                                     const Problem::Instance &Instance,
                                      float PerturbationStrength) {
 
     // Sort vector by risk in descending order
     std::vector<size_t> CurrentSchedule = Instance.GetDestinationsIds();
-    Problem::repairSchedule(Instance, CurrentSchedule);
 
-    applyLocalSearch(Instance, CurrentSchedule);
+    if (Model == Problem::Model::MinMakespan)
+        Problem::repairSchedule(Instance, CurrentSchedule);
+
+    applyLocalSearch(Model, Instance, CurrentSchedule);
     auto CurrentObjective =
-        Problem::evaluateSchedule(Instance, CurrentSchedule);
+        Problem::evaluateSchedule(Model, Instance, CurrentSchedule);
 
     do {
         // Copies the schedule and evaluates the perturbated schedule
         auto CandidateSchedule = CurrentSchedule;
         applyPerturbation(CandidateSchedule, PerturbationStrength);
 
-        // Sort vector by risk in descending order
-        Problem::repairSchedule(Instance, CandidateSchedule);
+        if (Model == Problem::Model::MinMakespan)
+            Problem::repairSchedule(Instance, CandidateSchedule);
 
-        applyLocalSearch(Instance, CandidateSchedule);
+        applyLocalSearch(Model, Instance, CandidateSchedule);
 
         // Evaluates the schedule with perturbation
         auto CandidateObjective =
-            Problem::evaluateSchedule(Instance, CandidateSchedule);
+            Problem::evaluateSchedule(Model, Instance, CandidateSchedule);
 
         if (CurrentObjective > CandidateObjective) {
             CurrentObjective = CandidateObjective;
@@ -59,10 +62,12 @@ static inline void applyPerturbation(std::vector<size_t> &Schedule,
     } while (--NumOfSwaps > 0);
 }
 
-static int32_t scanNeighborhood(const Problem::Instance &Instance,
+static int32_t scanNeighborhood(Problem::Model Model,
+                                const Problem::Instance &Instance,
                                 std::vector<size_t> &Schedule) {
-    const auto Size       = Schedule.size();
-    auto CurrentObjective = Problem::evaluateSchedule(Instance, Schedule);
+    const auto Size = Schedule.size();
+    auto CurrentObjective =
+        Problem::evaluateSchedule(Model, Instance, Schedule);
 
     for (size_t I = 0; I < Size - 1; ++I) {
         for (size_t J = I + 1; J < Size; ++J) {
@@ -70,18 +75,20 @@ static int32_t scanNeighborhood(const Problem::Instance &Instance,
             if (ILS::TIME_LIMIT_EXCEEDED)
                 return -1;
 
-            // Performs a swap between jobs at indices I and J
-            // with respect to precedence constraints.
-            // This way we keep the schedule feasible.
-            if (Instance.Nodes[Schedule[I]].Risk >
-                Instance.Nodes[Schedule[J]].Risk)
+            // When solving with model MinMakespan, we can only make swaps that
+            // respect precedence constraints. In practice, we swap I and J if
+            // r[I] <= r[J]
+            else if (Model == Problem::Model::MinMakespan &&
+                     (Instance.Nodes[Schedule[I]].Risk >
+                      Instance.Nodes[Schedule[J]].Risk))
                 continue;
 
             auto Aux    = Schedule[I];
             Schedule[I] = Schedule[J];
             Schedule[J] = Aux;
 
-            auto Objective = Problem::evaluateSchedule(Instance, Schedule);
+            auto Objective =
+                Problem::evaluateSchedule(Model, Instance, Schedule);
 
             if (Objective < CurrentObjective)
                 return Objective;
@@ -95,7 +102,9 @@ static int32_t scanNeighborhood(const Problem::Instance &Instance,
     return -1;
 }
 
-void ILS::applyLocalSearch(const Problem::Instance &Instance,
+void ILS::applyLocalSearch(Problem::Model Model,
+                           const Problem::Instance &Instance,
                            std::vector<size_t> &Schedule) {
-    for (size_t I = 0; scanNeighborhood(Instance, Schedule) != -1; ++I);
+    for (size_t I = 0; scanNeighborhood(Model, Instance, Schedule) != -1; ++I)
+        ;
 }

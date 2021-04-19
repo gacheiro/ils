@@ -50,8 +50,8 @@ Problem::Instance Problem::loadInstance(const std::string Path) {
     return Instance(NumOfNodes, NumOfEdges, Nodes, Edges);
 }
 
-uint32_t Problem::evaluateSchedule(const Instance &Instance,
-                                   const std::vector<size_t> &Schedule) {
+double Problem::evaluateSchedule(Model Model, const Instance &Instance,
+                                 const std::vector<size_t> &Schedule) {
     const auto Q = Instance.TotalNumOfWT();
     std::vector<WT> WTs(Q);
     std::vector<uint32_t> StartTime(Instance.NumOfNodes, 0);
@@ -95,15 +95,25 @@ uint32_t Problem::evaluateSchedule(const Instance &Instance,
             }
         }
 
-        // Every node have been cleaned
+        // Every node has been cleaned
         if (CompletionTime[Schedule.back()] > 0)
             break;
     }
 
-    auto Makespan =
-        std::max_element(CompletionTime.begin(), CompletionTime.end());
+    for (auto NodeId : Schedule)
+        assert(CompletionTime[NodeId] && !Instance.Nodes[NodeId].isOrigin());
 
-    return *Makespan;
+    double Objective = 0;
+
+    if (Model == Model::MinMakespan) {
+        auto Makespan =
+            std::max_element(CompletionTime.begin(), CompletionTime.end());
+        Objective = *Makespan;
+    } else
+        for (auto NodeId : Schedule)
+            Objective += Instance.Nodes[NodeId].Risk * CompletionTime[NodeId];
+
+    return Objective;
 }
 
 std::vector<std::vector<uint32_t>>

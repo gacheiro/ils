@@ -8,6 +8,7 @@
 #include "problem.h"
 
 std::string InstanceFile;
+Problem::Model Model      = Problem::Model::MinMakespan;
 uint32_t TimeLimit        = 10;
 float PertubationStrength = 0.5;
 
@@ -18,6 +19,10 @@ int parseCommandLine(int Argc, char *Argv[]) {
         "  OPTIONS:\n\n"
         "  -h, --help\n"
         "      Show this message and exit\n\n"
+        "  --model [MODEL]\n"
+        "      Choose the model to solve the instance. Valid options are\n"
+        "      1 for minimizing the makespan (default) or 2 for minimizing\n"
+        "      the sum of weighted completion times\n\n"
         "  --time-limit [LIMIT]\n"
         "      The maximum time to execute the program (in seconds)\n\n"
         "  --pstrength [STRENGTH]\n"
@@ -36,18 +41,28 @@ int parseCommandLine(int Argc, char *Argv[]) {
         }
 
         else if ((Arg == "--time-limit"))
-            if (I + 1 < Argc) {
+            if (I + 1 < Argc)
                 TimeLimit = std::stoi(Argv[++I]);
-            } else {
+            else {
                 std::cout << "--time-limit option requires one argument\n";
                 return -1;
             }
 
         else if ((Arg == "--pstrength"))
-            if (I + 1 < Argc) {
-                PertubationStrength = std::atof(Argv[++I]);
-            } else {
+            if (I + 1 < Argc)
+                PertubationStrength = std::stof(Argv[++I]);
+            else {
                 std::cout << "--pstrength option requires one argument\n";
+                return -1;
+            }
+
+        else if ((Arg == "--model"))
+            if (I + 1 < Argc) {
+                Model = std::stoi(Argv[++I]) == 1
+                            ? Problem::Model::MinMakespan
+                            : Problem::Model::MinWeightedCompletionTime;
+            } else {
+                std::cout << "--model option requires one argument\n";
                 return -1;
             }
 
@@ -60,21 +75,20 @@ int parseCommandLine(int Argc, char *Argv[]) {
 
 int main(int Argc, char *Argv[]) {
 
-    if (parseCommandLine(Argc, Argv) == -1) {
+    if (parseCommandLine(Argc, Argv) == -1)
         return -1;
-    }
 
-    std::cout << "\nRunning instance " << InstanceFile
-              << " with parameters --time-limit=" << TimeLimit
+    std::cout << "\nRunning instance " << InstanceFile << " with parameters"
+              << " --model=" << Model + 1 << " --time-limit=" << TimeLimit
               << " --pstrength=" << PertubationStrength << "\n";
 
     Problem::Instance Instance = Problem::loadInstance(InstanceFile);
 
     // We start the optimization in another thread while this one
-    // if responsible for accounting the time limit and sinalyzing
+    // is responsible for accounting the time limit and sinalyzing
     // when the time limit is reached
     std::future<Problem::Solution> FutureSolution =
-        std::async(ILS::solveInstance, Instance, PertubationStrength);
+        std::async(ILS::solveInstance, Model, Instance, PertubationStrength);
 
     std::this_thread::sleep_for(std::chrono::seconds(TimeLimit));
     ILS::TIME_LIMIT_EXCEEDED = true;

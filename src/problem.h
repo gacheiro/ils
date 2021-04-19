@@ -9,6 +9,7 @@
 
 namespace Problem {
 
+enum Model { MinMakespan, MinWeightedCompletionTime };
 enum NodeType { Origin, Destination };
 
 const int M = 999;
@@ -93,15 +94,16 @@ struct Instance {
 };
 
 struct Solution {
-    uint32_t Objective;
+    double Objective;
     std::vector<size_t> Schedule;
 
-    Solution(uint32_t _Objective, std::vector<size_t> _Schedule)
+    Solution(double _Objective, std::vector<size_t> _Schedule)
         : Objective(_Objective), Schedule{_Schedule} {}
 };
 
 Instance loadInstance(const std::string);
-uint32_t evaluateSchedule(const Instance &, const std::vector<size_t> &);
+
+double evaluateSchedule(Model, const Instance &, const std::vector<size_t> &);
 
 static inline void repairSchedule(const Instance &Instance,
                                   std::vector<size_t> &Schedule) {
