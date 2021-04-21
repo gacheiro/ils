@@ -1,7 +1,7 @@
 #include <chrono>
 #include <future>
-#include <iostream>
 #include <string>
+#include <ctime>
 #include <thread>
 
 #include "ils.h"
@@ -83,6 +83,8 @@ int main(int Argc, char *Argv[]) {
               << " --pstrength=" << PertubationStrength << "\n";
 
     Problem::Instance Instance = Problem::loadInstance(InstanceFile);
+
+    srand(time(NULL));
 
     // We start the optimization in another thread while this one
     // is responsible for accounting the time limit and sinalyzing

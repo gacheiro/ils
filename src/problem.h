@@ -78,13 +78,6 @@ struct Instance {
         return Ids;
     }
 
-    std::vector<uint32_t> GetDurations() const {
-        std::vector<uint32_t> Duration(NumOfNodes);
-        for (const auto &Node : Nodes)
-            Duration[Node.Id] = Node.Duration;
-        return Duration;
-    }
-
     uint32_t TotalNumOfWT() const {
         uint32_t Sum = 0;
         for (const auto &Node : Nodes)

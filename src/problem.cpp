@@ -1,5 +1,4 @@
 #include <fstream>
-#include <iostream>
 
 #include "problem.h"
 
@@ -67,8 +66,7 @@ double Problem::evaluateSchedule(Model Model, const Instance &Instance,
         }
     }
 
-    const auto &Duration = Instance.GetDurations();
-
+    // NOTE: need to review these loops
     for (uint32_t Period = 1;; ++Period) {
 
         for (auto &W : WTs) {
@@ -81,6 +79,7 @@ double Problem::evaluateSchedule(Model Model, const Instance &Instance,
                 if (Instance.Nodes[NodeId].isOrigin()) {
                     std::cout << "error: scheduled NodeId `" << NodeId
                               << "` is an origin\n";
+                    abort();
                 }
 
                 else if (CompletionTime[NodeId] > 0)
@@ -88,7 +87,8 @@ double Problem::evaluateSchedule(Model Model, const Instance &Instance,
 
                 StartTime[NodeId] =
                     Period + Instance.DistMatrix[W.NodeId][NodeId];
-                CompletionTime[NodeId] = StartTime[NodeId] + Duration[NodeId];
+                CompletionTime[NodeId] =
+                    StartTime[NodeId] + Instance.Nodes[NodeId].Duration;
 
                 W.NodeId = NodeId;
                 break;

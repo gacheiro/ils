@@ -1,5 +1,3 @@
-#include <iostream>
-
 #include "ils.h"
 #include "problem.h"
 
@@ -52,7 +50,7 @@ static inline void applyPerturbation(std::vector<size_t> &Schedule,
                                      float PerturbationStrength) {
     auto Size       = Schedule.size();
     auto NumOfSwaps = Size * PerturbationStrength / 2;
-
+    // NOTE: need to use an uniform distribution here
     do {
         auto I      = rand() % Size;
         auto J      = rand() % Size;
