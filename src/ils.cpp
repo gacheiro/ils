@@ -1,9 +1,13 @@
+#include <random>
+
 #include "ils.h"
 #include "problem.h"
 
 using namespace ILS;
 
 bool ILS::TIME_LIMIT_EXCEEDED = false;
+
+static std::default_random_engine RandomGenerator;
 
 static inline void applyPerturbation(std::vector<size_t> &, float);
 static int32_t scanNeighborhood(Problem::Model Model, const Problem::Instance &,
@@ -50,14 +54,15 @@ static inline void applyPerturbation(std::vector<size_t> &Schedule,
                                      float PerturbationStrength) {
     auto Size       = Schedule.size();
     auto NumOfSwaps = Size * PerturbationStrength / 2;
-    // NOTE: need to use an uniform distribution here
-    do {
-        auto I      = rand() % Size;
-        auto J      = rand() % Size;
+    std::uniform_int_distribution<int> Distribution(0, Size - 1);
+
+    while (NumOfSwaps-- > 0) {
+        auto I = Distribution(RandomGenerator);
+        auto J = Distribution(RandomGenerator);
         auto Aux    = Schedule[I];
         Schedule[I] = Schedule[J];
         Schedule[J] = Aux;
-    } while (--NumOfSwaps > 0);
+    }
 }
 
 static int32_t scanNeighborhood(Problem::Model Model,

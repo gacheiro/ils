@@ -79,12 +79,10 @@ int main(int Argc, char *Argv[]) {
         return -1;
 
     std::cout << "\nRunning instance " << InstanceFile << " with parameters"
-              << " --model=" << Model + 1 << " --time-limit=" << TimeLimit
-              << " --pstrength=" << PertubationStrength << "\n";
+              << " --model " << Model + 1 << " --time-limit " << TimeLimit
+              << " --pstrength " << PertubationStrength << "\n";
 
     Problem::Instance Instance = Problem::loadInstance(InstanceFile);
-
-    srand(time(NULL));
 
     // We start the optimization in another thread while this one
     // is responsible for accounting the time limit and sinalyzing
