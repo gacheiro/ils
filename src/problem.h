@@ -106,6 +106,22 @@ static inline void repairSchedule(const Instance &Instance,
         });
 }
 
+static inline bool canRelaxPriority(float RiskA, float RiskB,
+                                    float RelaxationThreshold) {
+    return RiskA <= RiskB + RelaxationThreshold;
+}
+
+static inline void AssertPiorityRules(const Instance &Instance,
+                                      const std::vector<size_t> &Schedule,
+                                      float RelaxationThreshold) {
+    for (size_t I = 0; I < Schedule.size() - 1; ++I) {
+        for (size_t J = I + 1; J < Schedule.size(); ++J) {
+            assert(Instance.Nodes[Schedule[I]].Risk >=
+                   Instance.Nodes[Schedule[J]].Risk - RelaxationThreshold);
+        }
+    }
+}
+
 } // namespace Problem
 
 #endif
