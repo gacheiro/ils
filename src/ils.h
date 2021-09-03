@@ -8,11 +8,12 @@ namespace ILS {
 // Global flag to terminate the execution when the time limit has exceeded
 extern bool TIME_LIMIT_EXCEEDED;
 
+extern float RELAXATION_THRESHOLD;
+
 Problem::Solution solveInstance(Problem::Model, const Problem::Instance &,
                                 float);
 
 void applyLocalSearch(Problem::Model, const Problem::Instance &,
                       std::vector<size_t> &);
 } // namespace ILS
-
 #endif
