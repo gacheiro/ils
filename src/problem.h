@@ -9,7 +9,6 @@
 
 namespace Problem {
 
-enum Model { MinMakespan, MinWeightedCompletionTime };
 enum NodeType { Origin, Destination };
 
 const int M = 999;
@@ -96,7 +95,7 @@ struct Solution {
 
 Instance loadInstance(const std::string);
 
-double evaluateSchedule(Model, const Instance &, const std::vector<size_t> &);
+uint32_t evaluateSchedule(const Instance &, const std::vector<size_t> &);
 
 static inline void repairSchedule(const Instance &Instance,
                                   std::vector<size_t> &Schedule) {
@@ -115,10 +114,9 @@ static inline void AssertPiorityRules(const Instance &Instance,
                                       const std::vector<size_t> &Schedule,
                                       float RelaxationThreshold) {
     for (size_t I = 0; I < Schedule.size() - 1; ++I) {
-        for (size_t J = I + 1; J < Schedule.size(); ++J) {
+        for (size_t J = I + 1; J < Schedule.size(); ++J)
             assert(Instance.Nodes[Schedule[I]].Risk >=
                    Instance.Nodes[Schedule[J]].Risk - RelaxationThreshold);
-        }
     }
 }
 

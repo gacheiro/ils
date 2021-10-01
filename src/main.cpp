@@ -1,31 +1,22 @@
-#include <chrono>
-#include <future>
 #include <string>
-#include <ctime>
-#include <thread>
 
 #include "ils.h"
 #include "problem.h"
 
 std::string InstanceFile;
-Problem::Model Model      = Problem::Model::MinMakespan;
-uint32_t TimeLimit        = 2;
-float PertubationStrength = 0.5;
-float RelaxationThreshold = 0;
+uint32_t TimeLimit         = 2;
+float PerturbationStrength = 0.5;
+float RelaxationThreshold  = 0;
 
 int parseCommandLine(int Argc, char *Argv[]) {
     const auto HELP_MSG =
-        "  Iterated Local Search implementation\n\n"
+        "  Iterated Local Search implementation for the [untitled]\n\n"
         "  USAGE:\n\n  ./ils [OPTIONS] INSTANCE_FILE\n\n"
         "  OPTIONS:\n\n"
         "  -h, --help\n"
         "      Show this message and exit\n\n"
         "  -p [THRESHOLD]\n"
         "      Threshold for relxation of priority rules, in range [0, 1]\n\n"
-        "  --model [MODEL]\n"
-        "      Choose the model to solve the instance. Valid options are\n"
-        "      1 for minimizing the makespan (default) or 2 for minimizing\n"
-        "      the sum of weighted completion times\n\n"
         "  --time-limit [LIMIT]\n"
         "      The maximum time to execute the program (in seconds)\n\n"
         "  --pstrength [STRENGTH]\n"
@@ -63,19 +54,9 @@ int parseCommandLine(int Argc, char *Argv[]) {
 
         else if ((Arg == "--pstrength"))
             if (I + 1 < Argc)
-                PertubationStrength = std::stof(Argv[++I]);
+                PerturbationStrength = std::stof(Argv[++I]);
             else {
                 std::cout << "--pstrength option requires one argument\n";
-                return -1;
-            }
-
-        else if ((Arg == "--model"))
-            if (I + 1 < Argc) {
-                Model = std::stoi(Argv[++I]) == 1
-                            ? Problem::Model::MinMakespan
-                            : Problem::Model::MinWeightedCompletionTime;
-            } else {
-                std::cout << "--model option requires one argument\n";
                 return -1;
             }
 
@@ -93,32 +74,22 @@ int main(int Argc, char *Argv[]) {
 
     // TODO: add a parameter for the random seed
     std::cout << "\nRunning instance " << InstanceFile << " with parameters"
-              << " --model " << Model + 1 << " --time-limit " << TimeLimit
-              << " --pstrength " << PertubationStrength 
-              << " -p " << RelaxationThreshold << "\n";
+              << " --time-limit " << TimeLimit << " --pstrength "
+              << PerturbationStrength << " -p " << RelaxationThreshold << "\n";
 
     Problem::Instance Instance = Problem::loadInstance(InstanceFile);
 
     // Defines the threshold for relaxation of priority rules
     ILS::RELAXATION_THRESHOLD = RelaxationThreshold;
-
-    // We start the optimization in another thread while this one
-    // is responsible for accounting the time limit and sinalyzing
-    // when the time limit is reached
-    std::future<Problem::Solution> FutureSolution =
-        std::async(ILS::solveInstance, Model, Instance, PertubationStrength);
-
-    std::this_thread::sleep_for(std::chrono::seconds(TimeLimit));
-    ILS::TIME_LIMIT_EXCEEDED = true;
-
-    Problem::Solution Solution = FutureSolution.get();
+    Problem::Solution Solution =
+        ILS::solveInstance(Instance, PerturbationStrength, TimeLimit);
 
     std::cout << "Objective = " << Solution.Objective << std::endl;
-    std::cout << "Schedule = "; 
+    std::cout << "Schedule = ";
     for (auto I : Solution.Schedule) {
         std::cout << Instance.Nodes[I].Risk << " ";
     }
     std::cout << std::endl;
-    
+
     return 0;
 }
