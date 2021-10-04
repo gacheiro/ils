@@ -1,7 +1,5 @@
 #include <chrono>
-#include <ctime>
 #include <future>
-#include <random>
 #include <thread>
 
 #include "ils.h"
@@ -10,8 +8,7 @@
 using namespace ILS;
 
 float ILS::RELAXATION_THRESHOLD = 0;
-
-static std::default_random_engine RandomGenerator;
+std::default_random_engine ILS::RandomGenerator;
 
 static int32_t scanNeighborhood(const Problem::Instance &,
                                 std::vector<size_t> &);
@@ -59,8 +56,8 @@ Problem::Solution ILS::solveInstance(const Problem::Instance &Instance,
     // We start the optimization in another thread while this one
     // is responsible for accounting the time limit and signal
     // when the time limit is reached
-    std::future<Problem::Solution> FutureSolution = std::async(
-        __solveInstance, Instance, PerturbationStrength, &TLE);
+    std::future<Problem::Solution> FutureSolution =
+        std::async(__solveInstance, Instance, PerturbationStrength, &TLE);
     std::this_thread::sleep_for(std::chrono::seconds(TimeLimit));
 
     TLE = true;
@@ -90,9 +87,8 @@ void ILS::applyPerturbation(const Problem::Instance &Instance,
 
 static int32_t scanNeighborhood(const Problem::Instance &Instance,
                                 std::vector<size_t> &Schedule) {
-    const auto Size = Schedule.size();
-    auto CurrentObjective =
-        Problem::evaluateSchedule(Instance, Schedule);
+    const auto Size       = Schedule.size();
+    auto CurrentObjective = Problem::evaluateSchedule(Instance, Schedule);
 
     for (size_t I = 0; I < Size - 1; ++I) {
         for (size_t J = I + 1; J < Size; ++J) {
@@ -107,8 +103,7 @@ static int32_t scanNeighborhood(const Problem::Instance &Instance,
             Schedule[I] = Schedule[J];
             Schedule[J] = Aux;
 
-            auto Objective =
-                Problem::evaluateSchedule(Instance, Schedule);
+            auto Objective = Problem::evaluateSchedule(Instance, Schedule);
 
             if (Objective < CurrentObjective)
                 return Objective;

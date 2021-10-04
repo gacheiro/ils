@@ -1,6 +1,8 @@
 #ifndef ILS_H
 #define ILS_H
 
+#include <random>
+
 #include "problem.h"
 
 namespace ILS {
@@ -11,6 +13,7 @@ namespace ILS {
 //   and return the best objective function found during the procedure;
 
 extern float RELAXATION_THRESHOLD;
+extern std::default_random_engine RandomGenerator;
 
 /// Solves a problem's instance.
 ///
