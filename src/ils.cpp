@@ -19,21 +19,16 @@ static Problem::Solution __solveInstance(const Problem::Instance &Instance,
                                          float PerturbationStrength,
                                          const bool *TLE) {
 
-    // Sort vector by risk in descending order
-    std::vector<size_t> CurrentSchedule = Instance.GetDestinationsIds();
-    Problem::repairSchedule(Instance, CurrentSchedule);
+    std::vector<size_t> CurrentSchedule = Problem::constructSchedule(Instance);
 
     applyLocalSearch(Instance, CurrentSchedule, TLE);
     auto CurrentObjective =
         Problem::evaluateSchedule(Instance, CurrentSchedule);
 
     do {
-        // Copies the schedule and evaluates the perturbated schedule
         auto CandidateSchedule = CurrentSchedule;
         applyPerturbation(Instance, CandidateSchedule, PerturbationStrength);
-
         applyLocalSearch(Instance, CandidateSchedule, TLE);
-
         // Evaluates the schedule with perturbation
         auto CandidateObjective =
             Problem::evaluateSchedule(Instance, CandidateSchedule);
@@ -54,7 +49,7 @@ Problem::Solution ILS::solveInstance(const Problem::Instance &Instance,
                                      uint32_t TimeLimit) {
     bool TLE = false;
     // We start the optimization in another thread while this one
-    // is responsible for accounting the time limit and signal
+    // is responsible for accounting the time limit and signaling
     // when the time limit is reached
     std::future<Problem::Solution> FutureSolution =
         std::async(__solveInstance, Instance, PerturbationStrength, &TLE);

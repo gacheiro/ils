@@ -93,23 +93,63 @@ struct Solution {
         : Objective(_Objective), Schedule{_Schedule} {}
 };
 
+/// Loads a problem's instance.
+///
+/// Typical usage:
+/// \code
+///   Problem::Instance Instance = loadInstance(InstancePath);
+/// \endcode
+///
+/// \param InstancePath the path of the instance to load.
+///
+/// \returns the loaded Problem::Instance.
 Instance loadInstance(const std::string);
 
-uint32_t evaluateSchedule(const Instance &, const std::vector<size_t> &);
+/// Constructs a feasible schedule for an instance.
+/// Used as a constructive heuristic.
+///
+/// Typical usage:
+/// \code
+///   auto Schedule = Problem::constructSchedule(Instance);
+/// \endcode
+///
+/// \param Instance the problem's instance to solve.
+///
+/// \returns a valid schedule for the problem.
+std::vector<size_t> constructSchedule(Instance Instance);
 
-static inline void repairSchedule(const Instance &Instance,
-                                  std::vector<size_t> &Schedule) {
-    std::stable_sort(
-        Schedule.begin(), Schedule.end(), [&](size_t UId, size_t VId) -> bool {
-            return Instance.Nodes[UId].Risk > Instance.Nodes[VId].Risk;
-        });
-}
+/// Evaluates the objective function of a schedule.
+///
+/// Typical usage:
+/// \code
+///   auto Objective = Problem::evaluateSchedule(Instance, Schedule);
+/// \endcode
+///
+/// \param Instance the problem's instance.
+/// \param Schedule the schedule to be evaluated.
+///
+/// \returns the value of the objective function for the schedule.
+uint32_t evaluateSchedule(const Instance &Instance,
+                          const std::vector<size_t> &Schedule);
 
+/// Checks if the precedence rule between two risks can be relaxed.
+///
+/// \param RiskA the risk associated to the first node.
+/// \param RiskB the risk associated to the second node.
+/// \param RelaxationThreshold the value of the relaxation threshold.
+///
+/// \returns true if the precendences can be relaxed or false otherwise.
 static inline bool canRelaxPriority(float RiskA, float RiskB,
                                     float RelaxationThreshold) {
     return RiskA <= RiskB + RelaxationThreshold;
 }
 
+/// Checks if a schedule is valid according to the priority rules.
+// If th schedule is invalid, throws an assertion error.
+///
+/// \param Instance the problem's instance.
+/// \param Schedule the schedule to be evaluated.
+/// \param RelaxationThreshold the value of the relaxation threshold.
 static inline void AssertPiorityRules(const Instance &Instance,
                                       const std::vector<size_t> &Schedule,
                                       float RelaxationThreshold) {
