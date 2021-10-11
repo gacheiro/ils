@@ -49,6 +49,16 @@ Problem::Instance Problem::loadInstance(const std::string Path) {
     return Instance(NumOfNodes, NumOfEdges, Nodes, Edges);
 }
 
+std::vector<size_t> Problem::constructSchedule(Instance Instance) {
+    std::vector<size_t> Schedule = Instance.GetDestinationsIds();
+    // Sort nodes by risk in descending order
+    std::stable_sort(
+        Schedule.begin(), Schedule.end(), [&](size_t UId, size_t VId) -> bool {
+            return Instance.Nodes[UId].Risk > Instance.Nodes[VId].Risk;
+        });
+    return Schedule;
+}
+
 uint32_t Problem::evaluateSchedule(const Instance &Instance,
                                    const std::vector<size_t> &Schedule) {
     const auto Q = Instance.TotalNumOfWT();
@@ -103,7 +113,8 @@ uint32_t Problem::evaluateSchedule(const Instance &Instance,
     for (auto NodeId : Schedule)
         assert(CompletionTime[NodeId] && !Instance.Nodes[NodeId].isOrigin());
 
-    uint32_t Objective = *std::max_element(CompletionTime.begin(), CompletionTime.end());
+    uint32_t Objective =
+        *std::max_element(CompletionTime.begin(), CompletionTime.end());
     return Objective;
 }
 

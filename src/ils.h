@@ -11,7 +11,6 @@ namespace ILS {
 // - `RELAXATION_THRESHOLD` should be a function parameter;
 // - Function `applyLocalSearch` should accept a solution instead of a schedule
 //   and return the best objective function found during the procedure;
-
 extern float RELAXATION_THRESHOLD;
 extern std::default_random_engine RandomGenerator;
 
@@ -51,7 +50,7 @@ void applyPerturbation(const Problem::Instance &Instance,
 /// \param Instance the problem's instance to solve.
 /// \param Schedule the schedule to apply the local search.
 /// \param TLE time limit exceeded flag.
-///            Should be handled by another thread.
+///        Should be handled by another thread.
 void applyLocalSearch(const Problem::Instance &Instance,
                       std::vector<size_t> &Schedule, const bool *TLE);
 
