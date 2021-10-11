@@ -155,8 +155,9 @@ static inline void AssertPiorityRules(const Instance &Instance,
                                       float RelaxationThreshold) {
     for (size_t I = 0; I < Schedule.size() - 1; ++I) {
         for (size_t J = I + 1; J < Schedule.size(); ++J)
-            assert(Instance.Nodes[Schedule[I]].Risk >=
-                   Instance.Nodes[Schedule[J]].Risk - RelaxationThreshold);
+            // https://stackoverflow.com/questions/4548004/how-to-correctly-and-standardly-compare-floats
+            assert(Instance.Nodes[Schedule[I]].Risk - Instance.Nodes[Schedule[J]].Risk
+                   + RelaxationThreshold >= -0.0001);
     }
 }
 
