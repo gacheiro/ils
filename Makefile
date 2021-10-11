@@ -8,7 +8,7 @@ TEST_SRC = src/*.h src/*.c
 problem.o: src/problem.h src/problem.cpp
 	$(CC) $(CFLAGS) -c src/problem.cpp
 
-ils.o: src/ils.h src/ils.cpp
+ils.o: src/ils.h src/ils.cpp src/problem.h
 	$(CC) $(CFLAGS) -c src/ils.cpp
 
 ils: problem.o ils.o src/main.cpp
