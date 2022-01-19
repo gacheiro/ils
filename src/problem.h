@@ -11,7 +11,8 @@ namespace Problem {
 
 enum NodeType { Origin, Destination };
 
-const int M = 999;
+const int M    = 9999;
+const auto EPS = 1e-7;
 
 struct Node {
     size_t Id;
@@ -45,11 +46,12 @@ struct Instance {
     std::vector<Node> Nodes;
     std::vector<Edge> Edges;
     std::vector<std::vector<uint32_t>> DistMatrix;
+    float RelaxationThreshold{.0f};
 
     Instance(size_t _NumOfNodes, size_t _NumOfEdges, std::vector<Node> _Nodes,
-             std::vector<Edge> _Edges)
-        : NumOfNodes{_NumOfNodes},
-          NumOfEdges{_NumOfEdges}, Nodes{_Nodes}, Edges{_Edges} {
+             std::vector<Edge> _Edges, float _RelaxationThreshold)
+        : NumOfNodes{_NumOfNodes}, NumOfEdges{_NumOfEdges}, Nodes{_Nodes},
+          Edges{_Edges}, RelaxationThreshold{_RelaxationThreshold} {
 
         if (NumOfNodes != Nodes.size()) {
             std::cerr << "Nodes.size() differs from NumOfNodes. It's "
@@ -86,11 +88,25 @@ struct Instance {
 };
 
 struct Solution {
-    double Objective;
+  private:
+    Problem::Instance Instance;
+    uint32_t Makespan;
     std::vector<size_t> Schedule;
+    std::vector<uint32_t> StartTime;
+    std::vector<uint32_t> CompletionTime;
 
-    Solution(double _Objective, std::vector<size_t> _Schedule)
-        : Objective(_Objective), Schedule{_Schedule} {}
+  public:
+    Solution(Problem::Instance _Instance, std::vector<size_t> _Schedule)
+        : Instance(_Instance), Schedule{_Schedule} {
+        StartTime.resize(Instance.NumOfNodes);
+        CompletionTime.resize(Instance.NumOfNodes);
+    }
+
+    size_t Size() { return Schedule.size(); }
+    uint32_t GetMakespan();
+    bool SwapTasks(size_t NodeIdA, size_t NodeIdB);
+    bool IsFeasible();
+    void PrintSchedule();
 };
 
 /// Loads a problem's instance.
@@ -101,9 +117,10 @@ struct Solution {
 /// \endcode
 ///
 /// \param InstancePath the path of the instance to load.
+/// \param RelaxationThreshold the value of the relaxation threshold.
 ///
 /// \returns the loaded Problem::Instance.
-Instance loadInstance(const std::string);
+Instance loadInstance(const std::string, float RelaxationThreshold);
 
 /// Constructs a feasible schedule for an instance.
 /// Used as a constructive heuristic.
@@ -118,20 +135,6 @@ Instance loadInstance(const std::string);
 /// \returns a valid schedule for the problem.
 std::vector<size_t> constructSchedule(Instance Instance);
 
-/// Evaluates the objective function of a schedule.
-///
-/// Typical usage:
-/// \code
-///   auto Objective = Problem::evaluateSchedule(Instance, Schedule);
-/// \endcode
-///
-/// \param Instance the problem's instance.
-/// \param Schedule the schedule to be evaluated.
-///
-/// \returns the value of the objective function for the schedule.
-uint32_t evaluateSchedule(const Instance &Instance,
-                          const std::vector<size_t> &Schedule);
-
 /// Checks if the precedence rule between two risks can be relaxed.
 ///
 /// \param RiskA the risk associated to the first node.
@@ -144,23 +147,14 @@ static inline bool canRelaxPriority(float RiskA, float RiskB,
     return RiskA <= RiskB + RelaxationThreshold;
 }
 
-/// Checks if a schedule is valid according to the priority rules.
-// If th schedule is invalid, throws an assertion error.
+/// Checks if the precedence rule between two risks can be relaxed.
 ///
-/// \param Instance the problem's instance.
-/// \param Schedule the schedule to be evaluated.
-/// \param RelaxationThreshold the value of the relaxation threshold.
-static inline void AssertPiorityRules(const Instance &Instance,
-                                      const std::vector<size_t> &Schedule,
-                                      float RelaxationThreshold) {
-    for (size_t I = 0; I < Schedule.size() - 1; ++I) {
-        for (size_t J = I + 1; J < Schedule.size(); ++J)
-            // https://stackoverflow.com/questions/4548004/how-to-correctly-and-standardly-compare-floats
-            assert(Instance.Nodes[Schedule[I]].Risk - Instance.Nodes[Schedule[J]].Risk
-                   + RelaxationThreshold >= -0.0001);
-    }
-}
-
+/// \param Instance the problem's instance
+/// \param NodeIdA the risk associated to the first node.
+/// \param NodeIdB the risk associated to the second node.
+///
+/// \returns true if the precendences can be relaxed or false otherwise.
+bool canSwap(const Problem::Instance &Instance,
+             const std::vector<size_t> &Schedule, size_t I, size_t J);
 } // namespace Problem
-
 #endif

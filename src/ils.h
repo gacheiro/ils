@@ -31,28 +31,23 @@ extern std::default_random_engine RandomGenerator;
 Problem::Solution solveInstance(const Problem::Instance &Instance,
                                 float PerturbationStrength, uint32_t TimeLimit);
 
-/// Applies a perturbation to a schedule. The schedule is modified in place.
+/// Applies a perturbation to a solution. The solution is modified in place.
 ///
-/// \param Instance the problem's instance to solve.
-/// \param Schedule the schedule to apply the local search.
+/// \param Solution the solution to apply the local search.
 /// \param PerturbationStrength perturbation strength param.
-void applyPerturbation(const Problem::Instance &Instance,
-                       std::vector<size_t> &Schedule,
-                       float PerturbationStrength);
+void applyPerturbation(Problem::Solution &Solution, float PerturbationStrength);
 
-/// Applies a local search to a schedule. The schedule is modified in place.
+/// Applies a local search to a solution. The solution is modified in place.
 ///
 /// Typical usage:
 /// \code
 ///   applyLocalSearch(Problem::MinMakespan, Instance, Schedule, NULL);
 /// \endcode
 ///
-/// \param Instance the problem's instance to solve.
-/// \param Schedule the schedule to apply the local search.
+/// \param Solution solution to apply local search to.
 /// \param TLE time limit exceeded flag.
 ///        Should be handled by another thread.
-void applyLocalSearch(const Problem::Instance &Instance,
-                      std::vector<size_t> &Schedule, const bool *TLE);
+void applyLocalSearch(Problem::Solution &Solution, const bool *TLE);
 
 } // namespace ILS
 #endif

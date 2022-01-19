@@ -10,38 +10,37 @@ using namespace ILS;
 float ILS::RELAXATION_THRESHOLD = 0;
 std::default_random_engine ILS::RandomGenerator;
 
-static int32_t scanNeighborhood(const Problem::Instance &,
-                                std::vector<size_t> &);
-static bool canSwap(const Problem::Instance &, const std::vector<size_t> &,
-                    size_t I, size_t J, float);
+static int32_t scanNeighborhood(Problem::Solution &Solution);
+// static bool canSwap(const Problem::Instance &, const std::vector<size_t> &,
+//                    size_t I, size_t J, float);
 
 static Problem::Solution __solveInstance(const Problem::Instance &Instance,
                                          float PerturbationStrength,
                                          const bool *TLE) {
+    auto NumIt                   = 0;
+    std::vector<size_t> Schedule = Problem::constructSchedule(Instance);
+    Problem::Solution CurrentSolution(Instance, Schedule);
+    applyLocalSearch(CurrentSolution, TLE);
 
-    std::vector<size_t> CurrentSchedule = Problem::constructSchedule(Instance);
-
-    applyLocalSearch(Instance, CurrentSchedule, TLE);
-    auto CurrentObjective =
-        Problem::evaluateSchedule(Instance, CurrentSchedule);
+    auto CurrentMakespan = CurrentSolution.GetMakespan();
 
     do {
-        auto CandidateSchedule = CurrentSchedule;
-        applyPerturbation(Instance, CandidateSchedule, PerturbationStrength);
-        applyLocalSearch(Instance, CandidateSchedule, TLE);
+        auto CandidateSolution = CurrentSolution;
+        applyPerturbation(CandidateSolution, PerturbationStrength);
+        applyLocalSearch(CandidateSolution, TLE);
         // Evaluates the schedule with perturbation
-        auto CandidateObjective =
-            Problem::evaluateSchedule(Instance, CandidateSchedule);
+        auto CandidateMakespan = CandidateSolution.GetMakespan();
 
-        if (CurrentObjective > CandidateObjective) {
-            CurrentObjective = CandidateObjective;
-            CurrentSchedule  = CandidateSchedule;
+        if (CurrentMakespan > CandidateMakespan) {
+            CurrentSolution = CandidateSolution;
+            CurrentMakespan = CandidateMakespan;
         }
+        ++NumIt;
     } while (!(*TLE));
 
-    Problem::AssertPiorityRules(Instance, CurrentSchedule,
-                                ILS::RELAXATION_THRESHOLD);
-    return Problem::Solution(CurrentObjective, CurrentSchedule);
+    assert(CurrentSolution.IsFeasible());
+    std::cout << NumIt << " iterations run\n";
+    return CurrentSolution;
 }
 
 Problem::Solution ILS::solveInstance(const Problem::Instance &Instance,
@@ -59,67 +58,59 @@ Problem::Solution ILS::solveInstance(const Problem::Instance &Instance,
     return FutureSolution.get();
 }
 
-void ILS::applyPerturbation(const Problem::Instance &Instance,
-                            std::vector<size_t> &Schedule,
+void ILS::applyPerturbation(Problem::Solution &Solution,
                             float PerturbationStrength) {
-    auto Size       = Schedule.size();
+    auto Size       = Solution.Size();
     auto NumOfSwaps = Size * PerturbationStrength / 2;
     std::uniform_int_distribution<size_t> Distribution(0, Size - 1);
 
     while (NumOfSwaps-- > 0) {
         auto I = Distribution(RandomGenerator);
         auto J = Distribution(RandomGenerator);
-
-        if (!canSwap(Instance, Schedule, std::min(I, J), std::max(I, J),
-                     ILS::RELAXATION_THRESHOLD))
-            continue;
-
-        auto Aux    = Schedule[I];
-        Schedule[I] = Schedule[J];
-        Schedule[J] = Aux;
-    }
-}
-
-static int32_t scanNeighborhood(const Problem::Instance &Instance,
-                                std::vector<size_t> &Schedule) {
-    const auto Size       = Schedule.size();
-    auto CurrentObjective = Problem::evaluateSchedule(Instance, Schedule);
-
-    for (size_t I = 0; I < Size - 1; ++I) {
-        for (size_t J = I + 1; J < Size; ++J) {
-
-            //        if (ILS::TIME_LIMIT_EXCEEDED)
-            //            return -1;
-
-            if (!canSwap(Instance, Schedule, I, J, ILS::RELAXATION_THRESHOLD))
+        Solution.SwapTasks(std::min(I, J), std::max(I, J));
+        /*    if (!canSwap(Instance, Schedule, std::min(I, J), std::max(I, J),
+                         ILS::RELAXATION_THRESHOLD))
                 continue;
 
             auto Aux    = Schedule[I];
             Schedule[I] = Schedule[J];
             Schedule[J] = Aux;
+        */
+    }
+}
 
-            auto Objective = Problem::evaluateSchedule(Instance, Schedule);
+static int32_t scanNeighborhood(Problem::Solution &Solution) {
+    auto Size            = Solution.Size();
+    auto CurrentMakespan = Solution.GetMakespan();
 
-            if (Objective < CurrentObjective)
-                return Objective;
-            else {
+    for (size_t I = 0; I < Size - 1; ++I) {
+        for (size_t J = I + 1; J < Size; ++J) {
+            Solution.SwapTasks(I, J);
+            /*          if (!canSwap(Instance, Schedule, I, J,
+               ILS::RELAXATION_THRESHOLD)) continue;
+
+                        auto Aux    = Schedule[I];
+                        Schedule[I] = Schedule[J];
+                        Schedule[J] = Aux;
+            */
+            if (Solution.GetMakespan() < CurrentMakespan)
+                return Solution.GetMakespan();
+            else
                 // Not a better solution. Undo the swap
-                Schedule[J] = Schedule[I];
-                Schedule[I] = Aux;
-            }
+                Solution.SwapTasks(I, J);
         }
     }
     return -1;
 }
 
-void ILS::applyLocalSearch(const Problem::Instance &Instance,
-                           std::vector<size_t> &Schedule, const bool *TLE) {
+void ILS::applyLocalSearch(Problem::Solution &Solution, const bool *TLE) {
     while (TLE != NULL && !(*TLE)) {
-        if (scanNeighborhood(Instance, Schedule) == -1)
+        if (scanNeighborhood(Solution) == -1)
             break;
     }
 }
 
+/*
 static bool canSwap(const Problem::Instance &Instance,
                     const std::vector<size_t> &Schedule, size_t I, size_t J,
                     float RThreshold) {
@@ -143,3 +134,4 @@ static bool canSwap(const Problem::Instance &Instance,
             Problem::canRelaxPriority(GreatestRisk, Nodes[Schedule[J]].Risk,
                                       RThreshold));
 }
+*/

@@ -88,7 +88,8 @@ int main(int Argc, char *Argv[]) {
               << PerturbationStrength << " -p " << RelaxationThreshold
               << " --seed " << RandomSeed << "\n";
 
-    Problem::Instance Instance = Problem::loadInstance(InstanceFile);
+    Problem::Instance Instance =
+        Problem::loadInstance(InstanceFile, RelaxationThreshold);
 
     // Defines the seed for the random number generator
     ILS::RandomGenerator.seed(RandomSeed);
@@ -96,13 +97,6 @@ int main(int Argc, char *Argv[]) {
     ILS::RELAXATION_THRESHOLD = RelaxationThreshold;
     Problem::Solution Solution =
         ILS::solveInstance(Instance, PerturbationStrength, TimeLimit);
-
-    std::cout << "Objective = " << Solution.Objective << std::endl;
-    std::cout << "Schedule = ";
-    for (auto I : Solution.Schedule) {
-        std::cout << Instance.Nodes[I].Risk << " ";
-    }
-    std::cout << std::endl;
-
+    Solution.PrintSchedule();
     return 0;
 }

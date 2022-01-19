@@ -8,7 +8,8 @@ struct WT {
     size_t Id, NodeId;
 };
 
-Problem::Instance Problem::loadInstance(const std::string Path) {
+Problem::Instance Problem::loadInstance(const std::string Path,
+                                        float RelaxationThreshold) {
     std::vector<Node> Nodes;
     std::vector<Edge> Edges;
     std::ifstream InstanceFile(Path);
@@ -46,7 +47,7 @@ Problem::Instance Problem::loadInstance(const std::string Path) {
         std::cerr << "error: unable to open path " << Path << "\n";
         abort();
     }
-    return Instance(NumOfNodes, NumOfEdges, Nodes, Edges);
+    return Instance(NumOfNodes, NumOfEdges, Nodes, Edges, RelaxationThreshold);
 }
 
 std::vector<size_t> Problem::constructSchedule(Instance Instance) {
@@ -57,65 +58,6 @@ std::vector<size_t> Problem::constructSchedule(Instance Instance) {
             return Instance.Nodes[UId].Risk > Instance.Nodes[VId].Risk;
         });
     return Schedule;
-}
-
-uint32_t Problem::evaluateSchedule(const Instance &Instance,
-                                   const std::vector<size_t> &Schedule) {
-    const auto Q = Instance.TotalNumOfWT();
-    std::vector<WT> WTs(Q);
-    std::vector<uint32_t> StartTime(Instance.NumOfNodes, 0);
-    std::vector<uint32_t> CompletionTime(Instance.NumOfNodes, 0);
-
-    // Set the starting node of every WT sequentially in order of origins.
-    size_t WTId = 0;
-    for (const auto OId : Instance.GetOriginsIds()) {
-        for (uint32_t I = 0; I < Instance.Nodes[OId].NumberOfWT; ++I) {
-            WTs[WTId].Id     = WTId;
-            WTs[WTId].NodeId = OId;
-            ++WTId;
-        }
-    }
-
-    // NOTE: need to review these loops
-    for (uint32_t Period = 1;; ++Period) {
-
-        for (auto &W : WTs) {
-
-            if (CompletionTime[W.NodeId] > Period)
-                continue;
-
-            for (const auto NodeId : Schedule) {
-
-                if (Instance.Nodes[NodeId].isOrigin()) {
-                    std::cout << "error: scheduled NodeId `" << NodeId
-                              << "` is an origin\n";
-                    abort();
-                }
-
-                else if (CompletionTime[NodeId] > 0)
-                    continue;
-
-                StartTime[NodeId] =
-                    Period + Instance.DistMatrix[W.NodeId][NodeId];
-                CompletionTime[NodeId] =
-                    StartTime[NodeId] + Instance.Nodes[NodeId].Duration;
-
-                W.NodeId = NodeId;
-                break;
-            }
-        }
-
-        // Every node has been cleaned
-        if (CompletionTime[Schedule.back()] > 0)
-            break;
-    }
-
-    for (auto NodeId : Schedule)
-        assert(CompletionTime[NodeId] && !Instance.Nodes[NodeId].isOrigin());
-
-    uint32_t Objective =
-        *std::max_element(CompletionTime.begin(), CompletionTime.end());
-    return Objective;
 }
 
 std::vector<std::vector<uint32_t>>
@@ -146,4 +88,120 @@ Problem::GetDistanceMatrix(const std::vector<Node> &Nodes,
                     DistMatrix[I][J] = DistMatrix[I][K] + DistMatrix[K][J];
 
     return DistMatrix;
+}
+
+uint32_t Problem::Solution::GetMakespan() {
+    const auto Q = Instance.TotalNumOfWT();
+    std::vector<WT> WTs(Q);
+    for (size_t I = 0; I < Instance.NumOfNodes; ++I) {
+        StartTime[I]      = 0;
+        CompletionTime[I] = 0;
+    }
+
+    // Sets the starting node of every WT sequentially in order of origins.
+    size_t WTId = 0;
+    for (const auto OId : Instance.GetOriginsIds()) {
+        for (uint32_t I = 0; I < Instance.Nodes[OId].NumberOfWT; ++I) {
+            WTs[WTId].Id     = WTId;
+            WTs[WTId].NodeId = OId;
+            ++WTId;
+        }
+    }
+
+    // Note: this is quite inefficient O(n^2)
+    auto SchedulePtr = Schedule.begin();
+    for (uint32_t Period = 0;;) {
+
+        if (SchedulePtr == Schedule.end())
+            break;
+
+        auto NodeId = *SchedulePtr;
+        // Loops through available teams and chooses
+        // the one which provides the earliast finish date
+        int EarliestFinishTime  = M;
+        auto EarliestFinishTeam = -1;
+        for (size_t I = 0; I < WTs.size(); ++I) {
+            if (CompletionTime[WTs[I].NodeId] > Period)
+                continue;
+
+            int FinishTime = Period +
+                             Instance.DistMatrix[WTs[I].NodeId][NodeId] +
+                             Instance.Nodes[NodeId].Duration;
+
+            if (FinishTime < EarliestFinishTime) {
+                EarliestFinishTime = FinishTime;
+                EarliestFinishTeam = I;
+            }
+        }
+
+        if (EarliestFinishTeam != -1) {
+            StartTime[NodeId] =
+                CompletionTime[WTs[EarliestFinishTeam].NodeId];
+            CompletionTime[NodeId]         = EarliestFinishTime;
+            WTs[EarliestFinishTeam].NodeId = NodeId;
+            ++SchedulePtr;
+        }
+        else
+            ++Period;
+    }
+
+    for (auto NodeId : Schedule)
+        assert(CompletionTime[NodeId] && !Instance.Nodes[NodeId].isOrigin());
+
+    Makespan = *std::max_element(CompletionTime.begin(), CompletionTime.end());
+    return Makespan;
+}
+
+bool Problem::Solution::SwapTasks(size_t NodeIdA, size_t NodeIdB) {
+    if (!canSwap(Instance, Schedule, NodeIdA, NodeIdB))
+        return false;
+
+    auto Aux          = Schedule[NodeIdA];
+    Schedule[NodeIdA] = Schedule[NodeIdB];
+    Schedule[NodeIdB] = Aux;
+
+    return true;
+}
+
+bool Problem::canSwap(const Problem::Instance &Instance,
+                      const std::vector<size_t> &Schedule, size_t I, size_t J) {
+    assert(I <= J && "Range [I, J] is invalid!");
+    assert(Schedule.size() > 0 && "Schedule is empty!");
+
+    auto &Nodes      = Instance.Nodes;
+    auto HighestRisk = Nodes[Schedule[I]].Risk;
+    size_t HighestRiskIndex = I;
+
+    // Gets the highest node in the range (I, J)
+    for (auto K = I + 1; K < J; ++K) {
+        if (Nodes[Schedule[K]].Risk > HighestRisk) {
+            HighestRisk = Nodes[Schedule[K]].Risk;
+            HighestRiskIndex = K;
+        }
+    }
+
+    return Problem::canRelaxPriority(Nodes[Schedule[HighestRiskIndex]].Risk,
+                                     Nodes[Schedule[J]].Risk,
+                                     Instance.RelaxationThreshold);
+}
+
+bool Problem::Solution::IsFeasible() {
+    auto Size_ = Size();
+    for (size_t I = 0; I < Size_ - 1; ++I) {
+        for (size_t J = I + 1; J < Size_; ++J)
+            // https://stackoverflow.com/questions/4548004/how-to-correctly-and-standardly-compare-floats
+            if (!(Instance.Nodes[Schedule[I]].Risk -
+                      Instance.Nodes[Schedule[J]].Risk +
+                      Instance.RelaxationThreshold >=
+                  -EPS))
+                return false;
+    }
+    return true;
+}
+
+void Problem::Solution::PrintSchedule() {
+    std::cout << "Makespan: " << GetMakespan() << '\n';
+    for (auto NodeId : Schedule)
+        std::cout << CompletionTime[NodeId] << ' ';
+    std::cout << '\n';
 }
