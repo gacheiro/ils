@@ -3,11 +3,12 @@
 #include "ils.h"
 #include "problem.h"
 
-std::string InstanceFile;
-uint32_t TimeLimit         = 2;
+std::string InstancePath;
+long int Evaluations       = -1;
 float PerturbationStrength = 0.5;
 float RelaxationThreshold  = 0;
 int RandomSeed             = 0;
+bool SetupTimes            = true;
 
 int parseCommandLine(int Argc, char *Argv[]) {
     const auto HELP_MSG =
@@ -16,14 +17,17 @@ int parseCommandLine(int Argc, char *Argv[]) {
         " OPTIONS:\n\n"
         " -h, --help\n"
         " \tShow this message and exit\n\n"
-        " -p [THRESHOLD]\n"
-        " \tThreshold for relxation of priority rules, in range [0, 1]\n\n"
-        " --time-limit [LIMIT]\n"
-        " \tThe maximum time to execute the program (in seconds)\n\n"
-        " --pstrength [STRENGTH]\n"
-        " \tThe pertubation strength factor (in range [0, 1])\n\n"
+        " --evaluations [BUDGET]\n"
+        " \tNumber of calls to evaluation function.\n"
+        " \tdefault is -1 (sets automatically)\n"
+        " --no-setup-times\n"
+        " \tDisable setup times (optimise only scheduling problem)\n\n"
+        " --perturbation [STRENGTH]\n"
+        " \tPertubation strength factor (in range [0, 1])\n\n"
+        " --relaxation [THRESHOLD]\n"
+        " \tThreshold for relaxation of priority rules, in range [0, 1]\n\n"
         " --seed [SEED]\n"
-        " \tThe seed for the random number generator\n\n";
+        " \tSeed for random number generator\n\n";
 
     if (Argc < 2) {
         std::cout << HELP_MSG;
@@ -38,28 +42,29 @@ int parseCommandLine(int Argc, char *Argv[]) {
             return -1;
         }
 
-        else if ((Arg == "-p")) {
+        else if ((Arg == "--relaxation")) {
             if (I + 1 < Argc)
                 RelaxationThreshold = std::stof(Argv[++I]);
             else {
-                std::cout << "-p option requires one argument\n";
+                std::cout << "--relaxation option requires one argument\n";
                 return -1;
             }
         }
 
-        else if ((Arg == "--time-limit"))
-            if (I + 1 < Argc)
-                TimeLimit = std::stoi(Argv[++I]);
+        else if ((Arg == "--evaluations"))
+            if (I + 1 < Argc) {
+                Evaluations = std::stoi(Argv[++I]);
+            }
             else {
-                std::cout << "--time-limit option requires one argument\n";
+                std::cout << "--evaluations option requires one argument\n";
                 return -1;
             }
 
-        else if ((Arg == "--pstrength"))
+        else if ((Arg == "--perturbation"))
             if (I + 1 < Argc)
                 PerturbationStrength = std::stof(Argv[++I]);
             else {
-                std::cout << "--pstrength option requires one argument\n";
+                std::cout << "--perturbation option requires one argument\n";
                 return -1;
             }
 
@@ -71,8 +76,13 @@ int parseCommandLine(int Argc, char *Argv[]) {
                 return -1;
             }
 
+        else if ((Arg == "--no-setup-times"))
+            SetupTimes = false;
+
+        // TODO: add a --silent mode
+
         else
-            InstanceFile = Arg;
+            InstancePath = Arg;
     }
 
     return 0;
@@ -83,20 +93,26 @@ int main(int Argc, char *Argv[]) {
     if (parseCommandLine(Argc, Argv) == -1)
         return -1;
 
-    std::cout << "\nRunning instance " << InstanceFile << " with parameters"
-              << " --time-limit " << TimeLimit << " --pstrength "
-              << PerturbationStrength << " -p " << RelaxationThreshold
-              << " --seed " << RandomSeed << "\n";
+    // std::cout << "\nRunning instance " << InstanceFile << " with parameters"
+    //          << " --budget " << MaxBudget << " --pstrength "
+    //          << PerturbationStrength << " -p " << RelaxationThreshold
+    //          << " --seed " << RandomSeed << "\n";
 
+    Problem::Config ProblemConfig = {RelaxationThreshold, SetupTimes};
     Problem::Instance Instance =
-        Problem::loadInstance(InstanceFile, RelaxationThreshold);
+        Problem::loadInstance(InstancePath, ProblemConfig);
 
-    // Defines the seed for the random number generator
-    ILS::RandomGenerator.seed(RandomSeed);
-    // Defines the threshold for relaxation of priority rules
-    ILS::RELAXATION_THRESHOLD = RelaxationThreshold;
-    Problem::Solution Solution =
-        ILS::solveInstance(Instance, PerturbationStrength, TimeLimit);
-    Solution.PrintSchedule();
+    // Automatically calculates the amount of evaluation calls
+    // based on the number of nodes
+    if (Evaluations <= 0)
+        Evaluations = 10000 * Instance.NumOfNodes;
+
+    ILS::Config ILSConfig = {RelaxationThreshold, PerturbationStrength,
+                             Evaluations, RandomSeed};
+
+    Problem::Solution Solution = ILS::solveInstance(Instance, ILSConfig);
+
+    //  Solution.PrintSchedule();
+    std::cout << Solution.GetMakespan() << '\n';
     return 0;
 }

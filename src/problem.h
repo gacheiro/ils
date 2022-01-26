@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <climits>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -11,8 +12,13 @@ namespace Problem {
 
 enum NodeType { Origin, Destination };
 
-const int M    = 9999;
+const int M    = INT_MAX;
 const auto EPS = 1e-7;
+
+struct Config {
+    float RelaxationThreshold;
+    bool SetupTimes;
+};
 
 struct Node {
     size_t Id;
@@ -32,9 +38,7 @@ struct Node {
 struct Edge {
     Node U;
     Node V;
-    uint32_t Weight{1};
-
-    Edge(Node _U, Node _V) : U{_U}, V{_V} {}
+    uint32_t Weight;
 };
 
 std::vector<std::vector<uint32_t>> GetDistanceMatrix(const std::vector<Node> &,
@@ -109,6 +113,9 @@ struct Solution {
     void PrintSchedule();
 };
 
+//
+// TODO: RelaxationThreshold shouldn't be a param here
+//
 /// Loads a problem's instance.
 ///
 /// Typical usage:
@@ -120,7 +127,7 @@ struct Solution {
 /// \param RelaxationThreshold the value of the relaxation threshold.
 ///
 /// \returns the loaded Problem::Instance.
-Instance loadInstance(const std::string, float RelaxationThreshold);
+Instance loadInstance(std::string InstancePath, Config Config);
 
 /// Constructs a feasible schedule for an instance.
 /// Used as a constructive heuristic.

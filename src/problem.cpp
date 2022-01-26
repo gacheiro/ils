@@ -8,11 +8,11 @@ struct WT {
     size_t Id, NodeId;
 };
 
-Problem::Instance Problem::loadInstance(const std::string Path,
-                                        float RelaxationThreshold) {
+Problem::Instance Problem::loadInstance(std::string InstancePath,
+                                        Problem::Config Config) {
     std::vector<Node> Nodes;
     std::vector<Edge> Edges;
-    std::ifstream InstanceFile(Path);
+    std::ifstream InstanceFile(InstancePath);
     size_t NumOfNodes, NumOfEdges;
 
     if (InstanceFile.is_open()) {
@@ -35,19 +35,21 @@ Problem::Instance Problem::loadInstance(const std::string Path,
         }
 
         // Read the set of edges
+        uint32_t DefaultWeight = (Config.SetupTimes ? 1 : 0);
         size_t IdU, IdV;
         InstanceFile >> NumOfEdges;
         for (size_t I = 0; I < NumOfEdges; ++I) {
             InstanceFile >> IdU >> IdV;
-            Edges.push_back({Nodes[IdU], Nodes[IdV]});
+            Edges.push_back({Nodes[IdU], Nodes[IdV], DefaultWeight});
         }
 
         InstanceFile.close();
     } else {
-        std::cerr << "error: unable to open path " << Path << "\n";
+        std::cerr << "error: unable to open path " << InstancePath << "\n";
         abort();
     }
-    return Instance(NumOfNodes, NumOfEdges, Nodes, Edges, RelaxationThreshold);
+    return Instance(NumOfNodes, NumOfEdges, Nodes, Edges,
+                    Config.RelaxationThreshold);
 }
 
 std::vector<size_t> Problem::constructSchedule(Instance Instance) {
@@ -135,13 +137,11 @@ uint32_t Problem::Solution::GetMakespan() {
         }
 
         if (EarliestFinishTeam != -1) {
-            StartTime[NodeId] =
-                CompletionTime[WTs[EarliestFinishTeam].NodeId];
+            StartTime[NodeId] = CompletionTime[WTs[EarliestFinishTeam].NodeId];
             CompletionTime[NodeId]         = EarliestFinishTime;
             WTs[EarliestFinishTeam].NodeId = NodeId;
             ++SchedulePtr;
-        }
-        else
+        } else
             ++Period;
     }
 
@@ -168,14 +168,14 @@ bool Problem::canSwap(const Problem::Instance &Instance,
     assert(I <= J && "Range [I, J] is invalid!");
     assert(Schedule.size() > 0 && "Schedule is empty!");
 
-    auto &Nodes      = Instance.Nodes;
-    auto HighestRisk = Nodes[Schedule[I]].Risk;
+    auto &Nodes             = Instance.Nodes;
+    auto HighestRisk        = Nodes[Schedule[I]].Risk;
     size_t HighestRiskIndex = I;
 
     // Gets the highest node in the range (I, J)
     for (auto K = I + 1; K < J; ++K) {
         if (Nodes[Schedule[K]].Risk > HighestRisk) {
-            HighestRisk = Nodes[Schedule[K]].Risk;
+            HighestRisk      = Nodes[Schedule[K]].Risk;
             HighestRiskIndex = K;
         }
     }

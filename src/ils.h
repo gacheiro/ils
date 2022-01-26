@@ -7,12 +7,13 @@
 
 namespace ILS {
 
-// TODO:
-// - `RELAXATION_THRESHOLD` should be a function parameter;
-// - Function `applyLocalSearch` should accept a solution instead of a schedule
-//   and return the best objective function found during the procedure;
-extern float RELAXATION_THRESHOLD;
-extern std::default_random_engine RandomGenerator;
+// Keep all config variables together;
+struct Config {
+    float RelaxationThreshold;
+    float PerturbationStrength;
+    long int Evaluations;
+    int RandomSeed;
+};
 
 /// Solves a problem's instance.
 ///
@@ -29,13 +30,14 @@ extern std::default_random_engine RandomGenerator;
 ///
 /// \returns a Problem::Solution for the instance.
 Problem::Solution solveInstance(const Problem::Instance &Instance,
-                                float PerturbationStrength, uint32_t TimeLimit);
+                                Config Config);
 
 /// Applies a perturbation to a solution. The solution is modified in place.
 ///
 /// \param Solution the solution to apply the local search.
 /// \param PerturbationStrength perturbation strength param.
-void applyPerturbation(Problem::Solution &Solution, float PerturbationStrength);
+void applyPerturbation(Problem::Solution &Solution, float PerturbationStrength,
+                       std::default_random_engine &RandomGenerator);
 
 /// Applies a local search to a solution. The solution is modified in place.
 ///
@@ -47,7 +49,7 @@ void applyPerturbation(Problem::Solution &Solution, float PerturbationStrength);
 /// \param Solution solution to apply local search to.
 /// \param TLE time limit exceeded flag.
 ///        Should be handled by another thread.
-void applyLocalSearch(Problem::Solution &Solution, const bool *TLE);
+void applyLocalSearch(Problem::Solution &Solution, long int &Evaluations);
 
 } // namespace ILS
 #endif
