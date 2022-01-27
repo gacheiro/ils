@@ -7,6 +7,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <cmath>
 
 namespace Problem {
 
@@ -151,7 +152,7 @@ std::vector<size_t> constructSchedule(Instance Instance);
 /// \returns true if the precendences can be relaxed or false otherwise.
 static inline bool canRelaxPriority(float RiskA, float RiskB,
                                     float RelaxationThreshold) {
-    return RiskA <= RiskB + RelaxationThreshold;
+    return RiskA - RiskB <= RelaxationThreshold;
 }
 
 /// Checks if the precedence rule between two risks can be relaxed.

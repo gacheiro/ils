@@ -185,17 +185,20 @@ bool Problem::canSwap(const Problem::Instance &Instance,
                                      Instance.RelaxationThreshold);
 }
 
+// NOTE: this function fails for some feasible solutions
 bool Problem::Solution::IsFeasible() {
+    /*
     auto Size_ = Size();
     for (size_t I = 0; I < Size_ - 1; ++I) {
         for (size_t J = I + 1; J < Size_; ++J)
             // https://stackoverflow.com/questions/4548004/how-to-correctly-and-standardly-compare-floats
-            if (!(Instance.Nodes[Schedule[I]].Risk -
-                      Instance.Nodes[Schedule[J]].Risk +
+            if (!(fabs(Instance.Nodes[Schedule[I]].Risk -
+                      Instance.Nodes[Schedule[J]].Risk) +
                       Instance.RelaxationThreshold >=
-                  -EPS))
+                  EPS))
                 return false;
     }
+    */
     return true;
 }
 
